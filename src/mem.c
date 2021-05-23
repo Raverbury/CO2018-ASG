@@ -281,11 +281,11 @@ int free_mem(addr_t address, struct pcb_t * proc) {
    * uses new_v_addr to get the location of the destination and
    * old_v_addr for the source through, achieved by getting 
    * their first and second levels */
+   
+  addr_t new_v_addr = address;
+  addr_t old_v_addr = v_addr; 
   if (proc->bp != v_addr)
-  {
-    addr_t new_v_addr = address;
-    addr_t old_v_addr = v_addr;
-    
+  { 
     // move one page up at a time
     while (old_v_addr != proc->bp) {
 
@@ -340,7 +340,29 @@ int free_mem(addr_t address, struct pcb_t * proc) {
       printf("Bumping done\n");
   }
   
-  // decreases size and free page_table if empty afterwards
+  while (new_v_addr != old_v_addr)
+  {
+    addr_t first_lv = get_first_lv(new_v_addr);
+    addr_t second_lv = get_second_lv(new_v_addr);
+    struct seg_table_t * seg_table = proc->seg_table;
+    struct page_table_t * page_table = get_page_table(first_lv, seg_table);
+    if (page_table != NULL)
+    {
+      int i;
+  	  for (i = 0; i < page_table->size; i++)
+      {
+        if (page_table->table[i].v_index == second_lv)
+        {
+          page_table->table[i].v_index = -1;
+          page_table->table[i].p_index = -1;
+          break;
+		}
+      }
+    }
+    new_v_addr += PAGE_SIZE;
+  }
+  
+  // decrease size and free page_table if empty afterwards
   int tmp = freed_pages;
   while (freed_pages > 0) {
     int seg_size = proc -> seg_table -> size;
